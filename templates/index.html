@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Privacy-Preserving Medical Diagnosis</title>
+
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: radial-gradient(circle at top, #6a85ff, #4b2a8f);
+            color: white;
+        }
+
+        .container {
+            text-align: center;
+            width: 100%;
+            padding: 20px;
+        }
+
+        /* TITLE */
+        h1 {
+            font-size: 2.2rem;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.8;
+            margin-bottom: 25px;
+        }
+
+        /* CARD */
+        .card {
+            max-width: 450px;
+            width: 100%;
+            margin: auto;
+            padding: 25px;
+            border-radius: 20px;
+            backdrop-filter: blur(20px);
+            background: rgba(255, 255, 255, 0.12);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.4);
+        }
+
+        /* FILE INPUT */
+        input[type="file"] {
+            margin: 10px 0;
+            color: white;
+        }
+
+        /* BUTTON */
+        button {
+            margin-top: 10px;
+            background: linear-gradient(135deg, #00c6ff, #0072ff);
+            border: none;
+            padding: 12px 25px;
+            color: white;
+            font-size: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: 0.3s;
+        }
+
+        button:hover {
+            transform: scale(1.08);
+        }
+
+        /* RESULT */
+        .result {
+            margin-top: 15px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .normal { color: #00ffcc; }
+        .abnormal { color: #ff4d4d; }
+        .uncertain { color: #ffd633; }
+
+        .confidence {
+            margin-top: 5px;
+            font-size: 14px;
+        }
+
+        /* IMAGE FIX 🔥 */
+        #preview {
+            margin-top: 15px;
+            width: 100%;
+            max-width: 250px;
+            border-radius: 12px;
+            display: none;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.4);
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        /* LOADER */
+        .loader {
+            border: 5px solid rgba(255,255,255,0.3);
+            border-top: 5px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 15px auto;
+            display: none;
+        }
+
+        /* DASHBOARD BUTTON */
+        .dashboard {
+            margin-top: 20px;
+        }
+
+        .dashboard a {
+            text-decoration: none;
+            color: white;
+            font-size: 15px;
+            padding: 10px 20px;
+            border-radius: 10px;
+            background: rgba(255,255,255,0.2);
+            display: inline-block;
+        }
+
+        .dashboard a:hover {
+            background: rgba(255,255,255,0.4);
+        }
+
+        /* MOBILE FIX */
+        @media(max-width: 500px){
+            h1 {
+                font-size: 1.6rem;
+            }
+
+            .card {
+                padding: 20px;
+            }
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>🧠 Privacy-Preserving Medical Diagnosis</h1>
+    <div class="subtitle">Federated Learning + Blockchain</div>
+
+    <div class="card">
+
+        <form method="post" enctype="multipart/form-data" onsubmit="showLoader()">
+            <input type="file" name="file" accept="image/*" onchange="previewImage(event)" required>
+            <br>
+            <button type="submit">🚀 Predict</button>
+        </form>
+
+        <!-- LOADER -->
+        <div class="loader" id="loader"></div>
+
+        <!-- IMAGE PREVIEW -->
+        <img id="preview"/>
+
+        {% if result %}
+            <div class="result 
+                {% if 'NORMAL' in result %}normal
+                {% elif 'ABNORMAL' in result %}abnormal
+                {% else %}uncertain
+                {% endif %}
+            ">
+                {{ result }}
+            </div>
+
+            <div class="confidence">
+                Confidence: {{ confidence }}
+            </div>
+        {% endif %}
+
+    </div>
+
+    <div class="dashboard">
+        <a href="/history">📊 View Dashboard</a>
+    </div>
+
+</div>
+
+<script>
+function previewImage(event) {
+    const preview = document.getElementById('preview');
+    preview.src = URL.createObjectURL(event.target.files[0]);
+    preview.style.display = "block";
+}
+
+function showLoader() {
+    document.getElementById("loader").style.display = "block";
+}
+</script>
+
+</body>
+</html>

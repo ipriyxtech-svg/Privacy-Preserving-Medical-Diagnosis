@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Federated AI Medical Dashboard</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    background: radial-gradient(circle at top, #6a85ff, #4b2a8f);
+    color: white;
+}
+
+.header {
+    text-align: center;
+    padding: 20px;
+}
+
+.container {
+    width: 95%;
+    max-width: 1100px;
+    margin: auto;
+}
+
+.card {
+    backdrop-filter: blur(20px);
+    background: rgba(255,255,255,0.12);
+    padding: 25px;
+    margin: 20px auto;
+    border-radius: 20px;
+}
+
+.stats {
+    display:flex;
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+
+.stat-box {
+    background: rgba(0,0,0,0.35);
+    padding: 18px;
+    border-radius: 15px;
+    margin: 10px;
+    width: 120px;
+}
+
+canvas {
+    background: white;
+    border-radius: 15px;
+    padding: 10px;
+}
+
+.btn {
+    padding:10px 20px;
+    border-radius:10px;
+    color:white;
+    text-decoration:none;
+}
+
+.btn-delete { background:red; }
+.btn-home { background:gray; }
+</style>
+</head>
+
+<body>
+
+<div class="header">
+    <h1>📊 Federated AI Medical Dashboard</h1>
+</div>
+
+<div class="container">
+
+    <!-- 🔗 BLOCKCHAIN STATUS -->
+    <div class="card">
+        <h2>🔗 Blockchain Status</h2>
+        {% if valid %}
+            <p style="color:#00ffcc;">✅ Secure (No Tampering)</p>
+        {% else %}
+            <p style="color:#ff4d4d;">❌ Data Tampered</p>
+        {% endif %}
+    </div>
+
+    <!-- STATS -->
+    <div class="card stats">
+        <div class="stat-box"><h3>Total</h3><p id="total">0</p></div>
+        <div class="stat-box"><h3>Normal</h3><p id="normal">0</p></div>
+        <div class="stat-box"><h3>Abnormal</h3><p id="abnormal">0</p></div>
+        <div class="stat-box"><h3>Uncertain</h3><p id="uncertain">0</p></div>
+    </div>
+
+    <!-- HISTORY (BLOCKCHAIN VIEW) -->
+    <div class="card">
+        <h2>🧾 Blockchain History</h2>
+
+        {% if history|length == 0 %}
+            <p>No data</p>
+        {% endif %}
+
+        {% for block in history %}
+        <div style="margin-bottom:15px;">
+            ⏱ {{ block.timestamp }} → {{ block.data.result }} ({{ block.data.confidence }})<br>
+            🔑 Hash: {{ block.hash[:20] }}...
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- CONFIDENCE -->
+    <div class="card">
+        <h2>📈 Confidence</h2>
+        <canvas id="confidenceChart"></canvas>
+    </div>
+
+    <!-- METRICS -->
+    <div class="card">
+        <h2>📊 Live Training (Accuracy vs F1)</h2>
+        <canvas id="metricsChart"></canvas>
+    </div>
+
+    <!-- CONFUSION MATRIX -->
+    <div class="card">
+        <h2>🔥 Confusion Matrix</h2>
+        <canvas id="cmChart"></canvas>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="card">
+        <a href="/clear" class="btn btn-delete">Clear</a>
+        <a href="/" class="btn btn-home">Back</a>
+    </div>
+
+</div>
+
+<!-- SAFE JSON -->
+<script id="history-data" type="application/json">
+{{ history | tojson | safe }}
+</script>
+
+<script id="metrics-data" type="application/json">
+{{ metrics | tojson | safe }}
+</script>
+
+<script>
+let history = JSON.parse(document.getElementById("history-data").textContent || "[]");
+
+// =====================
+// STATS
+// =====================
+document.getElementById("total").innerText = history.length;
+document.getElementById("normal").innerText = history.filter(x => x.data?.result === "✅ NORMAL").length;
+document.getElementById("abnormal").innerText = history.filter(x => x.data?.result === "⚠️ ABNORMAL").length;
+document.getElementById("uncertain").innerText = history.filter(x => x.data?.result === "⚠️ UNCERTAIN").length;
+
+// =====================
+// CONFIDENCE GRAPH
+// =====================
+new Chart(document.getElementById("confidenceChart"), {
+    type: "line",
+    data: {
+        labels: history.map(x => x.timestamp),
+        datasets: [{
+            label: "Confidence",
+            data: history.map(x => x.data?.confidence || 0),
+            borderColor: "#00c6ff"
+        }]
+    }
+});
+
+// =====================
+// LIVE METRICS GRAPH
+// =====================
+let metricsChart = new Chart(document.getElementById("metricsChart"), {
+    type: "line",
+    data: {
+        labels: [],
+        datasets: [
+            { label: "Accuracy", data: [], borderColor: "green" },
+            { label: "F1 Score", data: [], borderColor: "orange" }
+        ]
+    }
+});
+
+let cmChart;
+
+// LIVE UPDATE
+setInterval(() => {
+    fetch("/metrics-data")
+    .then(res => res.json())
+    .then(data => {
+
+        if(!data || data.length === 0) return;
+
+        // UPDATE GRAPH
+        metricsChart.data.labels = data.map((_, i) => "R" + (i+1));
+        metricsChart.data.datasets[0].data = data.map(x => x.accuracy);
+        metricsChart.data.datasets[1].data = data.map(x => x.f1);
+
+        metricsChart.update();
+
+        // UPDATE CM
+        let cm = data[data.length - 1].confusion_matrix;
+
+        if(cmChart) cmChart.destroy();
+
+        cmChart = new Chart(document.getElementById("cmChart"), {
+            type: "bar",
+            data: {
+                labels: ["TN","FP","FN","TP"],
+                datasets: [{
+                    data: [cm[0][0], cm[0][1], cm[1][0], cm[1][1]],
+                    backgroundColor: ["green","red","yellow","blue"]
+                }]
+            }
+        });
+
+    });
+}, 3000);
+</script>
+
+</body>
+</html>

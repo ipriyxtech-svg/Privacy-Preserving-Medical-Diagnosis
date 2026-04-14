@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+dataset/
+.env
+history.json
+metrics.json
